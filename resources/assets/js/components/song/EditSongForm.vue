@@ -150,6 +150,7 @@
               data-testid="lyrics-input"
               name="lyrics"
               title="Lyrics"
+              placeholder="No lyrics found... enter them here or fetch them"
             />
           </FormRow>
         </TabPanel>
@@ -158,6 +159,7 @@
 
     <footer>
       <Btn type="submit">Update</Btn>
+      <Btn v-if="currentTab === 'lyrics'" @click="maybeFetch">Fetch Lyrics</Btn>
       <Btn class="btn-cancel" white @click.prevent="maybeClose">Cancel</Btn>
     </footer>
   </form>
@@ -191,7 +193,7 @@ import TabPanelContainer from '@/components/ui/tabs/TabPanelContainer.vue'
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { showOverlay, hideOverlay } = useOverlay()
-const { toastSuccess } = useMessageToaster()
+const { toastSuccess, toastError } = useMessageToaster()
 const { showConfirmDialog } = useDialogBox()
 const { getFromContext } = useModal()
 
@@ -274,6 +276,53 @@ const submit = async () => {
     useErrorHandler('dialog').handleHttpError(error)
   } finally {
     hideOverlay()
+  }
+}
+
+async function maybeFetch () {
+  if (songs[0].lyrics.length === 0) {
+    fetchLyrics()
+    return
+  }
+  const confirm = await showConfirmDialog('Override the current lyrics?')
+  if (confirm) {
+    fetchLyrics()
+  }
+}
+
+async function fetchLyrics () {
+  try {
+    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(songs[0].artist_name)}/${encodeURIComponent(songs[0].title)}`
+    const apiResponse = await fetch(url)
+
+    if (apiResponse.status === 404) {
+      throw new Error('Song lyrics not found')
+    } else if (!apiResponse.ok) {
+      throw new Error('Unknown error fetching lyrics')
+    }
+
+    const jsonResponse = await apiResponse.json()
+    const lyrics = jsonResponse.lyrics // changing format because the format from lyrics.ovh is quite inconsistent
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{2}/g, '\n') // 1 newline between lines
+      .replace(/\n{3,}/g, '\n\n') // 2 newlines between sections
+
+    toastSuccess('Updated lyrics')
+    formData.lyrics = lyrics // immediately update formData for snappy feedback
+
+    const data: SongUpdateData = { lyrics }
+    const result = await songStore.update(songs, data)
+
+    if (!result) {
+      throw new Error('Unknown error updating lyrics')
+    }
+    eventBus.emit('SONGS_UPDATED', result) // updating works, it just takes 3 work days
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      toastError(error.message)
+    } else {
+      useErrorHandler('dialog').handleHttpError(error)
+    }
   }
 }
 </script>
