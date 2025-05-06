@@ -10,6 +10,7 @@ use App\Repositories\SongRepository;
 use App\Services\SongStorages\SongStorage;
 use App\Values\SongUpdateData;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -103,31 +104,32 @@ class SongService
 
     public function fetchLyrics(Song $song): int
     {
-        Log::info("in fetchLyrics");
-
         try {
-            $url = "https://api.lyrics.ovh/v1/" . urlencode("Blue Oyster Cult") . "/" . urlencode($song->title);
-            Log::info("url: " . $url);
+            // who decided that "name" is a good variable name for the artist D:
+            $url = "https://api.lyrics.ovh/v1/" . urlencode($song->name) . "/" . urlencode($song->title);
             $response = Http::get($url);
-            Log::info("response: " . $response);
             $response_code = $response->status();
 
-            if ($response_code >= 400) {
+            if ($response_code >= Response::HTTP_BAD_REQUEST) {
                 return $response_code;
             }
 
-            $lyrics = $response->json('lyrics');
+            $lyrics = $response->json('lyrics') ?: "";
+
+            if ($lyrics === "") {
+                Response::HTTP_NOT_FOUND;
+            }
+
+            Log::info($lyrics);
             // changing format because the format from lyrics.ovh is quite inconsistent
             $lyrics = str_replace("\r\n", "\n", $lyrics);
             $lyrics = preg_replace("/\n{2}/", "\n", $lyrics);   // 1 newline between lines
             $lyrics = preg_replace("/\n{3}/", "\n\n", $lyrics); // 2 newlines between sections
             $song->lyrics = $lyrics;
-            Log::info("lyrics: " . $song->lyrics);
             $song->push();
-            return 200;
-            // return $this->songRepository->getOne($song->id);
+            return Response::HTTP_OK;
         } catch (Throwable $e) {
-            return 500;
+            return Response::HTTP_INTERNAL_SERVER_ERROR;
         }
     }
 

@@ -19,7 +19,6 @@ use App\Services\LibraryManager;
 use App\Services\SongService;
 use App\Values\SongUpdateData;
 use Illuminate\Contracts\Auth\Authenticatable;
-use Illuminate\Support\Facades\Log;
 
 class SongController extends Controller
 {
@@ -76,16 +75,50 @@ class SongController extends Controller
         ]);
     }
 
+    // public function updateLyrics(SongFetchLyricRequest $request)
+    // {
+    //     Log::info("In API :)");
+    //     $error_code = Response::HTTP_OK;
+    //     $error_count = 0;
+    //     $error_song_title = "";
+
+    //     foreach ($request->songs as $song_id) {
+    //         $song = $this->songRepository->findOne($song_id);
+    //         if ($song === null) {
+    //             $error_code = Response::HTTP_NOT_FOUND;
+    //             $error_count++;
+    //             $error_song_title = "Unknown song";
+    //         }
+    //         $response_code = $this->songService->fetchLyrics($song);
+    //         if ($response_code >= Response::HTTP_BAD_REQUEST) {
+    //             $error_code = $response_code;
+    //             $error_count++;
+    //             $error_song_title = $song->name;
+    //         }
+    //     }
+
+    //     $response_msg = "";
+    //     switch ($error_count) {
+    //         case 0:  $response_msg = "Updated lyrics";                             break;
+    //         case 1:  $response_msg = "Failed fetching $error_song_title's lyrics"; break;
+    //         default: $response_msg = "Failed fetching $error_count lyrics";        break;
+    //     }
+        
+    //     return response($error_code)->json([
+    //         'response_msg' => $response_msg
+    //     ]);
+    // }
+
+    // currently only supports fetching the lyrics of one song, would be nice to add support for multiple songs later
     public function updateLyrics(SongFetchLyricRequest $request)
     {
-        Log::info("In API :)");
         $song = $this->songRepository->findOne($request->songs[0]);
 
         if ($song === null) {
-            return response()->json(404);
+            return response(404);
         }
 
-        return $this->songService->fetchLyrics($song);
+        return response($this->songService->fetchLyrics($song));
     }
 
     public function destroy(DeleteSongsRequest $request)

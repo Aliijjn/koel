@@ -135,11 +135,12 @@ export const songStore = {
   },
 
   async fetchLyrics (songsToUpdate: Song[]) {
-    const result = await http.put<SongUpdateResult>('lyrics', {
-      songs: songsToUpdate.map(song => song.id),
-    })
+    // should be returning something nicer than an int, but can't get it to work right now
+    const result = await http.put<number>('lyrics', { songs: songsToUpdate.map(song => song.id) })
+    if (result < 200 || result >= 300) {
+      throw new Error('Failed to fetch lyrics.')
+    }
     this.syncWithVault(songsToUpdate)
-    return result
   },
 
   async update (songsToUpdate: Song[], data: SongUpdateData) {

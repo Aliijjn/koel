@@ -159,7 +159,7 @@
 
     <footer>
       <Btn type="submit">Update</Btn>
-      <Btn v-if="currentTab === 'lyrics'" type="submit" @click="maybeFetch">Fetch Lyrics</Btn>
+      <Btn v-if="currentTab === 'lyrics'" @click.prevent="maybeFetch">Fetch Lyrics</Btn>
       <Btn class="btn-cancel" white @click.prevent="maybeClose">Cancel</Btn>
     </footer>
   </form>
@@ -280,45 +280,25 @@ const submit = async () => {
 }
 
 async function maybeFetch () {
+  // showOverlay()
+
   if (songs[0].lyrics.length === 0) {
     fetchLyrics()
-    return
+  } else {
+    const confirm = await showConfirmDialog('Override the current lyrics?')
+    if (confirm) {
+      fetchLyrics()
+    }
   }
-  const confirm = await showConfirmDialog('Override the current lyrics?')
-  if (confirm) {
-    fetchLyrics()
-  }
+  close()
+  // hideOverlay()
 }
 
 async function fetchLyrics () {
   try {
-    // const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(songs[0].artist_name)}/${encodeURIComponent(songs[0].title)}`
-    // const apiResponse = await fetch(url)
-
-    // if (apiResponse.status === 404) {
-    //   throw new Error('Song lyrics not found')
-    // } else if (!apiResponse.ok) {
-    //   throw new Error('Unknown error fetching lyrics')
-    // }
-
-    // const jsonResponse = await apiResponse.json()
-    // const lyrics = jsonResponse.lyrics // changing format because the format from lyrics.ovh is quite inconsistent
-    //   .replace(/\r\n/g, '\n')
-    //   .replace(/\n{2}/g, '\n') // 1 newline between lines
-    //   .replace(/\n{3,}/g, '\n\n') // 2 newlines between sections
-
-    // toastSuccess('Updated lyrics')
-    // formData.lyrics = lyrics // immediately update formData for snappy feedback
-
-    // const data: SongUpdateData = { lyrics }
-    // const result = await songStore.update(songs, data)
-    const result = await songStore.fetchLyrics(songs)
-
-    if (!result) {
-      throw new Error('Unknown error updating lyrics')
-    }
-    eventBus.emit('SONGS_UPDATED', result) // updating works, it just takes 3 work days
-  } catch (error: unknown) {
+    await songStore.fetchLyrics(songs)
+    toastSuccess('Updated lyrics.')
+  } catch (error) {
     if (error instanceof Error) {
       toastError(error.message)
     } else {
