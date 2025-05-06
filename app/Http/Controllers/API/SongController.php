@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\API\DeleteSongsRequest;
+use App\Http\Requests\API\SongFetchLyricRequest;
 use App\Http\Requests\API\SongListRequest;
 use App\Http\Requests\API\SongUpdateRequest;
 use App\Http\Resources\AlbumResource;
@@ -18,6 +19,7 @@ use App\Services\LibraryManager;
 use App\Services\SongService;
 use App\Values\SongUpdateData;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\Log;
 
 class SongController extends Controller
 {
@@ -72,6 +74,18 @@ class SongController extends Controller
             'artists' => ArtistResource::collection($artists),
             'removed' => $this->libraryManager->prune(),
         ]);
+    }
+
+    public function updateLyrics(SongFetchLyricRequest $request)
+    {
+        Log::info("In API :)");
+        $song = $this->songRepository->findOne($request->songs[0]);
+
+        if ($song === null) {
+            return response()->json(404);
+        }
+
+        return $this->songService->fetchLyrics($song);
     }
 
     public function destroy(DeleteSongsRequest $request)

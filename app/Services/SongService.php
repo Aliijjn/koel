@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -52,7 +53,9 @@ class SongService
 
                     optional(
                         $foundSong,
-                        fn (Song $song) => $updated->push($this->updateSong($song, clone $data)) // @phpstan-ignore-line
+                        fn (Song $song) => $updated->push($this->updateSong($song, clone $data))
+                        // fn (Song $song) => $updated->push($this->fetchLyrics($this->updateSong($song, clone $data)))
+                        // @phpstan-ignore-line
                     );
 
                     if ($noTrackUpdate) {
@@ -96,6 +99,36 @@ class SongService
         $song->push();
 
         return $this->songRepository->getOne($song->id);
+    }
+
+    public function fetchLyrics(Song $song): int
+    {
+        Log::info("in fetchLyrics");
+
+        try {
+            $url = "https://api.lyrics.ovh/v1/" . urlencode("Blue Oyster Cult") . "/" . urlencode($song->title);
+            Log::info("url: " . $url);
+            $response = Http::get($url);
+            Log::info("response: " . $response);
+            $response_code = $response->status();
+
+            if ($response_code >= 400) {
+                return $response_code;
+            }
+
+            $lyrics = $response->json('lyrics');
+            // changing format because the format from lyrics.ovh is quite inconsistent
+            $lyrics = str_replace("\r\n", "\n", $lyrics);
+            $lyrics = preg_replace("/\n{2}/", "\n", $lyrics);   // 1 newline between lines
+            $lyrics = preg_replace("/\n{3}/", "\n\n", $lyrics); // 2 newlines between sections
+            $song->lyrics = $lyrics;
+            Log::info("lyrics: " . $song->lyrics);
+            $song->push();
+            return 200;
+            // return $this->songRepository->getOne($song->id);
+        } catch (Throwable $e) {
+            return 500;
+        }
     }
 
     public function markSongsAsPublic(EloquentCollection $songs): void

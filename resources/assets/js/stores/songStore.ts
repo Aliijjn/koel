@@ -134,6 +134,14 @@ export const songStore = {
     })
   },
 
+  async fetchLyrics (songsToUpdate: Song[]) {
+    const result = await http.put<SongUpdateResult>('lyrics', {
+      songs: songsToUpdate.map(song => song.id),
+    })
+    this.syncWithVault(songsToUpdate)
+    return result
+  },
+
   async update (songsToUpdate: Song[], data: SongUpdateData) {
     if (songsToUpdate.some(song => !isSong(song))) {
       throw new Error('Only songs can be updated.')

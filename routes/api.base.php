@@ -119,6 +119,7 @@ Route::prefix('api')->middleware('api')->group(static function (): void {
             ->where(['song' => Song::ID_REGEX]);
 
         Route::put('songs', [SongController::class, 'update']);
+        Route::put('lyrics', [SongController::class, 'updateLyrics']);
         Route::delete('songs', [SongController::class, 'destroy']);
 
         Route::post('upload', UploadController::class);
